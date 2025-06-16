@@ -1,29 +1,41 @@
+import math
 from collections import Counter
+import pandas as pd
+from io import StringIO
 
-data = [
-    ([2, 2, 3], 'A'),
-    ([2, 1, 4], 'A'),
-    ([4, 5, 5], 'B'),
-    ([1, 7, 2], 'B')
-]
+csv_data = """ID,Feature1,Feature2,Label
+1,6,2,Class A
+2,2,3,Class A
+3,3,1,Class B
+4,5,5,Class B
+"""
 
-def distance(p1, p2):
-    total = 0
-    for i in range(len(p1)):
-        total += (p1[i] - p2[i]) ** 2
-    return total ** 0.5
+df = pd.read_csv(StringIO(csv_data))
 
-def knn(test_point, data, k=3):
+features = df.columns[1:-1]  
+label_col = df.columns[-1]   
+
+def get_neighbors(df, query, k):
     distances = []
-    for features, label in data:
-        dist = distance(test_point, features)
-        distances.append((dist, label))
+    for i, row in df.iterrows():
+        row_features = row[features]
+        dist = math.sqrt(sum((row_features[j] - query[j]) ** 2 for j in range(len(features))))
+        distances.append((dist, i))
     distances.sort(key=lambda x: x[0])
-    neighbors = distances[:k]
+    return distances[:k]
 
-    labels = [label for _, label in neighbors]
-    most_common = Counter(labels).most_common(1)[0][0]
-    return most_common
+def get_prediction(df, neighbors):
+    labels = [df.iloc[i][label_col] for _, i in neighbors]
+    return Counter(labels).most_common(1)[0][0]
 
-test = [3, 3, 3]
-print("Classified as:", knn(test, data))
+query = [float(input(f"Enter {col}: ")) for col in features]
+k = int(input("Enter value of k: "))
+
+neighbors = get_neighbors(df, query, k)
+
+print("\nNearest Neighbors:")
+for dist, idx in neighbors:
+    print(f"Index: {idx}, Distance: {dist:.2f}, Label: {df.iloc[idx][label_col]}")
+
+prediction = get_prediction(df, neighbors)
+print(f"\nPredicted Class: {prediction}")
